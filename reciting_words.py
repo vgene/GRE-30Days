@@ -6,7 +6,8 @@ import os
 from termcolor import colored
 from random import randint
 import shutil
-
+import progressbar
+import getch
 
 def parse_word(path):
     words = open(path,'r')
@@ -19,15 +20,18 @@ def parse_word(path):
 
 def recite_word(word):
     columns = shutil.get_terminal_size().columns
-    print(colored(word['word'],'green').center(columns))
-    count_down = int(input('Familiar?(0-5)'))
-    print(colored(word['explanation'],'yellow').center(columns))
+    print(colored(word['word'].center(columns),'green'))
+    print(colored('(0-5)?'.center(columns),'white','on_grey'))
+    count_down = int(getch.getch())
+    print(colored(word['explanation'].center(columns),'yellow'))
     if (count_down >= word['cycle']):
-        print(('Congratulation! Word '+word['word'] + ' has been learnt').center(columns))
-
+        input(('Congratulation! Word '+word['word'] + ' has been learnt').center(columns))
         return ['learnt']
 
-    ch = input('\'m\' to make a memo,\'q\' to quit, other keys to continue')
+    #ch = input('\'m\' to make a memo,\'q\' to quit, other keys to continue')
+    print(colored("m,q,other".center(columns),'white','on_grey'))
+    ch = getch.getch()
+
     if (ch == "m"):
         memo = input('Input Memo:')
         return ['memo',count_down,memo]
@@ -58,9 +62,23 @@ def reciting(word_db, learning_word_count, learning_cycle):
         if (len(word_db['learning']) <= 0):
             more_word()
         index = randint(0,len(word_db['learning'])-1) 
-        print(index)
+        #print(index)
         word = word_db['learning'][index]
+
+        os.system('cls' if os.name == 'nt' else 'clear')
+        bar = ""
+        bar = str(learning_word_count-len(word_db['learning']))+'/'+str(learning_word_count)+' '
+        for i in range(0,learning_word_count):
+            if (i < learning_word_count-len(word_db['learning'])):
+                bar += '█' 
+            else:
+                bar += '-'
+        print(bar.center(columns))
+        for i in range(0, int(rows/2 -1)):
+            print()
+
         rtn = recite_word(word)
+
         if (rtn[0]== 'learnt'):
             word['cycle'] = 0
             word_db['learning'].pop(index)
@@ -73,12 +91,14 @@ def reciting(word_db, learning_word_count, learning_cycle):
         elif (rtn[0] == 'memo'):
             word_db['learning'][index]['cycle'] -= rtn[1]
             word_db['learning'][index]['memo'] = rtn[2]
-        os.system('cls' if os.name == 'nt' else 'clear')
-        
+    
+    print("Save learning status in "+pkl_path)    
     pickle.dump(word_db,open(pkl_path,'wb')) 
 
 if __name__ == "__main__":
-    pkl_path = "./words.pkl"
+    
+    user = input("User:")
+    pkl_path = "./words_"+user+".pkl"
 
     if os.path.isfile(pkl_path):
         word_db = pickle.load(open(pkl_path,'rb'))
@@ -86,7 +106,13 @@ if __name__ == "__main__":
         dbpath = './words.txt'
         word_db = parse_word(dbpath)
         pickle.dump(word_db,open(pkl_path,'wb'))
-    print(len(word_db))
-    learning_word_count = int(input('Learning Word Count:'))
-    learning_cycle = int(input('Learnig Cycle:'))
+    try:
+        learning_word_count = int(input('Learning Word Count:'))
+        learning_cycle = int(input('Learnig Cycle:'))
+    except Exception as e:
+        print("Use default setting!")
+        print("Learning Word Count: 20")
+        print("Learning Cycle: 5")
+        learning_word_count = 20
+        learning_cycle = 5
     reciting(word_db, learning_word_count, learning_cycle)
