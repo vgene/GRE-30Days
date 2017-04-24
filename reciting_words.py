@@ -5,6 +5,8 @@ import pickle
 import os
 from termcolor import colored
 from random import randint
+import shutil
+
 
 def parse_word(path):
     words = open(path,'r')
@@ -15,13 +17,14 @@ def parse_word(path):
         word_db.append({'word':word, 'explanation':exp})
     return {'tolearn':word_db, 'learning':[], 'learnt':[]}
 
-
 def recite_word(word):
-    print(colored(word['word'],'green'))
+    columns = shutil.get_terminal_size().columns
+    print(colored(word['word'],'green').center(columns))
     count_down = int(input('Familiar?(0-5)'))
-    print(word['explanation'])
+    print(colored(word['explanation'],'yellow').center(columns))
     if (count_down >= word['cycle']):
-        print('Congratulation! Word '+word['word'] + ' has been learnt')
+        print(('Congratulation! Word '+word['word'] + ' has been learnt').center(columns))
+
         return ['learnt']
 
     ch = input('\'m\' to make a memo,\'q\' to quit, other keys to continue')
@@ -34,19 +37,28 @@ def recite_word(word):
         return ["continue",count_down]
 
 def reciting(word_db, learning_word_count, learning_cycle): 
-    for key in word_db.keys():
-        print(key+' word count:', len(word_db[key])
     
+    for key in word_db.keys():
+        print(key+' word count:', len(word_db[key]))
+
+    columns = shutil.get_terminal_size().columns
+    rows = shutil.get_terminal_size().lines
+
     # move word from tolearn to learning
-    while (len(word_db['learning']) < learning_word_count):
-        if len(word_db['tolearn'] >= 0:
-            index = randint(0,len(word_db['tolearn']))
-            item = word_db['tolearn'].pop(index)
-            item['cycle'] = learning_cycle
-            word_db['learning'].append(item)
+    def more_word():
+        print(colored('Wow! A new set of words! Let\'s continue!','blue').center(columns))
+        while (len(word_db['learning']) < learning_word_count):
+            if len(word_db['tolearn']) >= 0:
+                index = randint(0,len(word_db['tolearn'])-1)
+                item = word_db['tolearn'].pop(index)
+                item['cycle'] = learning_cycle
+                word_db['learning'].append(item)
 
     while (True):
-        index = randint(0,db_len) 
+        if (len(word_db['learning']) <= 0):
+            more_word()
+        index = randint(0,len(word_db['learning'])-1) 
+        print(index)
         word = word_db['learning'][index]
         rtn = recite_word(word)
         if (rtn[0]== 'learnt'):
@@ -61,8 +73,9 @@ def reciting(word_db, learning_word_count, learning_cycle):
         elif (rtn[0] == 'memo'):
             word_db['learning'][index]['cycle'] -= rtn[1]
             word_db['learning'][index]['memo'] = rtn[2]
+        os.system('cls' if os.name == 'nt' else 'clear')
         
-    pickle.dump(word_db,,open(pkl_path,'wb')) 
+    pickle.dump(word_db,open(pkl_path,'wb')) 
 
 if __name__ == "__main__":
     pkl_path = "./words.pkl"
@@ -73,7 +86,7 @@ if __name__ == "__main__":
         dbpath = './words.txt'
         word_db = parse_word(dbpath)
         pickle.dump(word_db,open(pkl_path,'wb'))
-
+    print(len(word_db))
     learning_word_count = int(input('Learning Word Count:'))
     learning_cycle = int(input('Learnig Cycle:'))
     reciting(word_db, learning_word_count, learning_cycle)
