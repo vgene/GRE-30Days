@@ -61,7 +61,7 @@ def recite_word(word, word_db):
 
     print(colored(word['explanation'].center(columns),'yellow'))
     say(word['word'])
-    say(word['explanation'])
+    # say(word['explanation'])
 
     if ('memo' in word.keys() and word['memo'] != ""):
         print(colored(word['memo'].center(columns),'blue','on_grey'))
@@ -69,27 +69,27 @@ def recite_word(word, word_db):
         input(('Congratulation! Word '+word['word'] + ' has been learnt').center(columns))
         return ['learnt']
 
-    #ch = input('\'m\' to make a memo,\'q\' to quit, other keys to continue')
-    print(colored("m,q,s,other".center(columns),'white','on_grey'))
-    ch = getch.getch()
-
-    if (ch == "m"):
-        memo = input('Input Memo:')
-        return ['memo',count_down,memo]
-    if (ch == "q"):
-        return ["quit",count_down]
-    if (ch == "s"):
-        search_str = input("Input search str, and mode('s','e' or 'm'), seperated by',': ")
-        search_str, mode = search_str.split(',')
-        print("Search for ",search_str," with mode ", mode)
-        word_list = get_similar(search_str, word_db, mode)
-        for word in word_list:
-            # print(word)
-            print(word['word'], word['explanation'])
-        input("Enter to Continue")
-        return ["continue", count_down]
-    else:
-        return ["continue",count_down]
+    while (1):
+        #ch = input('\'m\' to make a memo,\'q\' to quit, other keys to continue')
+        print(colored("m,p,q,s,enter".center(columns),'white','on_grey'))
+        ch = getch.getch()
+        if (ch == "p"):
+            say(word)
+        if (ch == "m"):
+            memo = input('Input Memo:')
+            return ['memo',count_down,memo]
+        if (ch == "q"):
+            return ["quit",count_down]
+        if (ch == "s"):
+            search_str = input("Input search str, and mode('s','e' or 'm'), seperated by',': ")
+            search_str, mode = search_str.split(',')
+            print("Search for ",search_str," with mode ", mode)
+            word_list = get_similar(search_str, word_db, mode)
+            for word in word_list:
+                # print(word)
+                print(word['word'], word['explanation'])
+        else:
+            return ["continue",count_down]
 
 def reciting(word_db, learning_word_count, learning_cycle):
 
