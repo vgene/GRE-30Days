@@ -8,6 +8,7 @@ from random import randint
 import shutil
 import getch
 import subprocess
+import time
 
 def say(text):
     subprocess.call('say "' + text +'"', shell=True)
@@ -28,7 +29,10 @@ def get_similar(search_str, db, method='sem'):
         s_list = []
         for item in l:
             word_str = item['word']
-            if ('m' in method):
+            if ('f' in method):
+                if (search_str == word_str):
+                    s_list.append(item)
+            elif ('m' in method):
                 if (search_str in word_str):
                     s_list.append(item)
             else:
@@ -48,18 +52,19 @@ def get_similar(search_str, db, method='sem'):
 
 def recite_word(word, word_db):
     columns = shutil.get_terminal_size().columns
-    print(colored(word['word'].center(columns),'green'))
+    print(colored(word['word'].strip().center(columns),'green'))
     say(word['word'])
 
     print(colored('(0-5)?'.center(columns),'white','on_grey'))
 
     try:
         count_down = int(getch.getch())
+        assert count_down<=5 and count_down>=0
     except Exception as e:
         print("Invalid input, set count down as 0")
         count_down = 0
 
-    print(colored(word['explanation'].center(columns),'yellow'))
+    print(colored(word['explanation'].strip().center(columns),'yellow'))
     say(word['word'])
     # say(word['explanation'])
 
@@ -74,32 +79,29 @@ def recite_word(word, word_db):
         print(colored("m,p,q,s,enter".center(columns),'white','on_grey'))
         ch = getch.getch()
         if (ch == "p"):
-            say(word)
-        if (ch == "m"):
+            say(word['word'])
+        elif (ch == "m"):
             memo = input('Input Memo:')
             return ['memo',count_down,memo]
-        if (ch == "q"):
+        elif (ch == "q"):
             return ["quit",count_down]
-        if (ch == "s"):
-            search_str = input("Input search str, and mode('s','e' or 'm'), seperated by',': ")
-            search_str, mode = search_str.split(',')
-            print("Search for ",search_str," with mode ", mode)
-            word_list = get_similar(search_str, word_db, mode)
-            for word in word_list:
-                # print(word)
-                print(word['word'], word['explanation'])
+        elif (ch == "s"):
+            try:
+                search_str = input("Input search str, and mode('f', 's','e' or 'm'): ")
+                search_str, mode = search_str.split(',')
+                print("Search for ",search_str," with mode ", mode)
+                word_list = get_similar(search_str, word_db, mode)
+                for word in word_list:
+                    # print(word)
+                    print(word['word'], word['explanation'])
+            except Exception as e:
+                print("Wrong arguments")
+                continue
         else:
             return ["continue",count_down]
 
 def reciting(word_db, learning_word_count, learning_cycle):
 
-    for key in word_db.keys():
-        print(key+' word count:', len(word_db[key]))
-
-    columns = shutil.get_terminal_size().columns
-    rows = shutil.get_terminal_size().lines
-
-    # move word from tolearn to learning
     def more_word():
         print(colored('Wow! A new set of words! Let\'s continue!','blue').center(columns))
         while (len(word_db['learning']) < learning_word_count):
@@ -109,42 +111,64 @@ def reciting(word_db, learning_word_count, learning_cycle):
                 item['cycle'] = learning_cycle
                 word_db['learning'].append(item)
 
-    while (True):
-        if (len(word_db['learning']) <= 0):
-            more_word()
-        index = randint(0,len(word_db['learning'])-1)
-        #print(index)
-        word = word_db['learning'][index]
+    try:
+        for key in word_db.keys():
+            print(key+' word count:', len(word_db[key]))
 
-        os.system('cls' if os.name == 'nt' else 'clear')
-        bar = ""
-        bar = str(learning_word_count-len(word_db['learning']))+'/'+str(learning_word_count)+' '
-        for i in range(0,learning_word_count):
-            if (i < learning_word_count-len(word_db['learning'])):
-                bar += '█'
-            else:
-                bar += '-'
-        print(bar.center(columns))
-        for i in range(0, int(rows/2 -3)):
-            print()
+        columns = shutil.get_terminal_size().columns
+        rows = shutil.get_terminal_size().lines
 
-        rtn = recite_word(word, word_db)
+        # move word from tolearn to learning
 
-        if (rtn[0]== 'learnt'):
-            word['cycle'] = 0
-            word_db['learning'].pop(index)
-            word_db['learnt'].append(word)
-        elif (rtn[0] == 'quit'):
-            word_db['learning'][index]['cycle'] -= rtn[1]
-            break
-        elif (rtn[0] == 'continue'):
-            word_db['learning'][index]['cycle'] -= rtn[1]
-        elif (rtn[0] == 'memo'):
-            word_db['learning'][index]['cycle'] -= rtn[1]
-            word_db['learning'][index]['memo'] = rtn[2]
+        start_time = time.time()
+        while (True):
+            if (len(word_db['learning']) <= 0):
+                pickle.dump(word_db,open(pkl_path,'wb'))
+                os.system('cls' if os.name == 'nt' else 'clear')
+                print("This round costs %s seconds" %str(time.time() - start_time))
+                print("Learnt Count:",len(word_db[
+                    'learnt']))
+                print("To learn count:",len(word_db['tolearn']))
+                input("Continue?")
+                more_word()
+                start_time = time.time()
+            index = randint(0,len(word_db['learning'])-1)
+            #print(index)
+            word = word_db['learning'][index]
 
-    print("Save learning status in "+pkl_path)
-    pickle.dump(word_db,open(pkl_path,'wb'))
+            os.system('cls' if os.name == 'nt' else 'clear')
+            bar = ""
+            bar = str(learning_word_count-len(word_db['learning']))+'/'+str(learning_word_count)+' '
+            for i in range(0,learning_word_count):
+                if (i < learning_word_count-len(word_db['learning'])):
+                    bar += '█'
+                else:
+                    bar += '-'
+            print(bar.center(columns))
+            for i in range(0, int(rows/2 -3)):
+                print()
+
+            rtn = recite_word(word, word_db)
+
+            if (rtn[0]== 'learnt'):
+                word['cycle'] = 0
+                word_db['learning'].pop(index)
+                word_db['learnt'].append(word)
+            elif (rtn[0] == 'quit'):
+                word_db['learning'][index]['cycle'] -= rtn[1]
+                break
+            elif (rtn[0] == 'continue'):
+                word_db['learning'][index]['cycle'] -= rtn[1]
+            elif (rtn[0] == 'memo'):
+                word_db['learning'][index]['cycle'] -= rtn[1]
+                word_db['learning'][index]['memo'] = rtn[2]
+
+        print("Save learning status in "+pkl_path)
+        pickle.dump(word_db,open(pkl_path,'wb'))
+    except Exception as e:
+        print("Something is wrong. Save learning status in "+pkl_path)
+        pickle.dump(word_db,open(pkl_path,'wb'))
+        return e
 
 if __name__ == "__main__":
 
